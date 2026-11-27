@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hello-agents-component-lab"
+version = "0.1.0"
+description = "Offline-first component lab for Hello-Agents chapters 8 and 9"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+real = [
+    "python-dotenv>=1.0,<2",
+    "qdrant-client>=1.12,<2",
+    "openai>=1.40,<3",
+    "neo4j>=5.26,<6",
+    "markitdown[pdf,docx,pptx,xlsx,xls]>=0.1.9,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["components*", "real_backends*"]
