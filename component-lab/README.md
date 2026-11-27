@@ -6,6 +6,7 @@
 - 克隆基线：`2eb1c7547018b519b85cb57acf5533f12d65bf8e`
 - 默认离线模式：Python 3.11+，仅使用标准库
 - 可选真实模式：`qdrant-client`、`openai`、`neo4j`、`markitdown`、`python-dotenv` 安装到本目录 `.venv`
+- 可选 Notebook 模式：`jupyterlab`、`ipykernel`、`nbformat`、`nbclient`，通过 `notebooks` extra 安装
 - 离线测试不调用 LLM、Qdrant、Neo4j、DashScope、Markdown 转换器或网络 API
 
 ## 快速运行
@@ -22,7 +23,50 @@ python3 -m compileall -q components tests
 
 无需 `pip install`，无需 `PYTHONPATH`，也无需创建 `.env`。在 `component-lab/` 根目录执行即可；若要安装为包，`pyproject.toml` 声明了零运行时依赖。
 
-可选 Notebook：`notebooks/offline_walkthrough.ipynb`。已提交版本不包含输出；执行后另存为 `*.executed.ipynb` 会被 `.gitignore` 忽略。
+## Notebook（可选）
+
+Notebook 路径为 `notebooks/offline_walkthrough.ipynb`，只运行本地确定性组件，不调用模型、Qdrant、Neo4j 或外部 API。以下命令均在 `component-lab/` 根目录执行：
+
+```bash
+# 安装独立 Notebook 依赖，并以 editable 模式安装本项目
+.venv/bin/python -m pip install -e '.[notebooks]'
+
+# 注册专用 kernel
+.venv/bin/python -m ipykernel install --user \
+  --name hello-agents \
+  --display-name 'Python (hello-agents)'
+
+# 验证 kernel
+.venv/bin/jupyter kernelspec list
+
+# 启动 JupyterLab；远程环境可使用 localhost:8888 端口转发
+.venv/bin/jupyter lab --no-browser --notebook-dir=.
+```
+
+打开 `notebooks/offline_walkthrough.ipynb` 后，在 Kernel 菜单中选择 **Python (hello-agents)**。Notebook 首个代码单元格会解析项目根目录：若 kernel cwd 是 `notebooks/`，则取其父目录 `component-lab/` 并插入 `sys.path`；后续单元格使用 `project_root` 定位 `data/sample_knowledge.md`。因此从 `component-lab/` 或 `notebooks/` 启动都不会再出现 `ModuleNotFoundError: No module named 'components'`。editable 安装仍是推荐方式，因为它同时保证 `components` 和 `real_backends` 可被其他脚本导入。
+
+无头验证故意使用 `notebooks/` 作为 kernel cwd，并把执行结果写入已被 `.gitignore` 忽略的 `runs/`：
+
+```bash
+.venv/bin/python - <<'PY'
+from pathlib import Path
+import nbformat
+from nbclient import NotebookClient
+
+root = Path.cwd()
+notebook = nbformat.read(root / 'notebooks/offline_walkthrough.ipynb', as_version=4)
+NotebookClient(
+    notebook,
+    timeout=120,
+    kernel_name='hello-agents',
+    resources={'metadata': {'path': str(root / 'notebooks')}},
+    allow_errors=False,
+).execute()
+nbformat.write(notebook, root / 'runs/offline_walkthrough.executed.ipynb')
+PY
+```
+
+已提交的 Notebook 不包含输出；不要把它另存回 `notebooks/offline_walkthrough.ipynb`。
 
 ## 真实模式（可选）
 
